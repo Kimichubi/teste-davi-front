@@ -12,6 +12,7 @@ export default function EditPollPage() {
   const [dateToInit, setDateToInit] = useState("");
   const [dateToEnd, setDateToEnd] = useState("");
   const [options, setOptions] = useState<{ id: number; title: string }[]>([]);
+  const [pollId, setPollId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchPoll = async () => {
@@ -22,10 +23,11 @@ export default function EditPollPage() {
 
       if (json.data) {
         const poll = json.data;
-        setTitle(poll.title);
-        setDateToInit(poll.dateToInit.slice(0, 16)); // Para datetime-local
-        setDateToEnd(poll.dateToEnd.slice(0, 16));
-        setOptions(poll.pollResponses);
+        setTitle(poll!.title);
+        setDateToInit(poll!.dateToInit.slice(0, 16)); // Para datetime-local
+        setDateToEnd(poll!.dateToEnd.slice(0, 16));
+        setOptions(poll!.pollResponses);
+        setPollId(poll.id);
       }
 
       setLoading(false);
@@ -70,6 +72,25 @@ export default function EditPollPage() {
     } else {
       const error = await res.text();
       alert(`Erro ao atualizar: ${error}`);
+    }
+  };
+
+  const deletePoll = async () => {
+    const body = {
+      pollId,
+    };
+
+    const res = await fetch(`http://localhost:3000/delete/poll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      alert("Enquete deletada com sucesso!");
+      router.push("/");
+    } else {
+      const error = await res.text();
+      alert(`Erro ao deletar: ${error}`);
     }
   };
 
@@ -127,6 +148,14 @@ export default function EditPollPage() {
           Salvar Alterações
         </button>
       </form>
+      <div>
+        <button
+          onClick={deletePoll}
+          className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700"
+        >
+          Deletar Enquete
+        </button>
+      </div>
     </main>
   );
 }
