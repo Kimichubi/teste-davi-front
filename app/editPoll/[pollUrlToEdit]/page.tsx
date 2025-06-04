@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import PollData from "@/types/Poll";
 
 export default function EditPollPage() {
   const { pollUrlToEdit } = useParams<{ pollUrlToEdit: string }>();
   const router = useRouter();
 
-  const [poll, setPoll] = useState<PollData>();
   const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [dateToInit, setDateToInit] = useState("");
+  const [dateToEnd, setDateToEnd] = useState("");
+  const [options, setOptions] = useState<{ id: number; title: string }[]>([]);
 
   useEffect(() => {
     const fetchPoll = async () => {
@@ -17,109 +19,110 @@ export default function EditPollPage() {
         `http://localhost:3000/poll/getByUrl/${pollUrlToEdit}`
       );
       const json = await res.json();
-      setPoll(json.data);
+
+      if (json.data) {
+        const poll = json.data;
+        setTitle(poll.title);
+        setDateToInit(poll.dateToInit.slice(0, 16)); // Para datetime-local
+        setDateToEnd(poll.dateToEnd.slice(0, 16));
+        setOptions(poll.pollResponses);
+      }
+
       setLoading(false);
     };
+
     fetchPoll();
   }, [pollUrlToEdit]);
 
-  const handleChange = (index: number, value: string) => {
-    const updated = [...poll!.pollResponses];
+  const handleOptionChange = (index: number, value: string) => {
+    const updated = [...options];
     updated[index].title = value;
-    setPoll({ ...poll!, pollResponses: updated });
+    setOptions(updated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const body = {
       pollEditedBody: {
-        title: poll!.title,
-        dateToInit: poll!.dateToInit,
-        dateToEnd: poll!.dateToEnd,
+        title,
+        dateToInit: new Date(dateToInit).toISOString(),
+        dateToEnd: new Date(dateToEnd).toISOString(),
       },
-      pollResponsesEdited: poll!.pollResponses.map((r: any) => ({
-        id: r.id,
-        title: r.title,
+      pollResponsesEdited: options.map((opt) => ({
+        id: opt.id,
+        title: opt.title,
       })),
     };
 
-    const res = await fetch(`/poll/edit/${pollUrlToEdit}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await fetch(
+      `http://localhost:3000/poll/edit/${pollUrlToEdit}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
 
     if (res.ok) {
       alert("Enquete atualizada com sucesso!");
       router.push("/");
     } else {
-      alert("Erro ao atualizar.");
+      const error = await res.text();
+      alert(`Erro ao atualizar: ${error}`);
     }
   };
 
-  if (loading) return <p>Carregando enquete...</p>;
-  if (!poll) return <p>Enquete não encontrada</p>;
+  if (loading) return <p className="text-center">Carregando enquete...</p>;
 
   return (
     <main className="max-w-xl mx-auto p-6 bg-white rounded shadow mt-8">
-      <h1 className="text-2xl font-bold mb-4">Editar Enquete</h1>
+      <h1 className="text-2xl font-bold mb-4 text-center">Editar Enquete</h1>
+
       <form onSubmit={handleSubmit} className="space-y-4">
-        <label className="block">
-          Título:
-          <input
-            type="text"
-            value={poll.title}
-            onChange={(e) => setPoll({ ...poll, title: e.target.value })}
-            className="w-full p-2 border rounded mt-1"
-          />
-        </label>
+        <input
+          type="text"
+          placeholder="Título da Enquete"
+          className="w-full border p-2 rounded"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+        />
 
-        <label className="block">
-          Data de Início:
+        <div className="flex gap-4">
           <input
             type="datetime-local"
-            value={poll.dateToInit.slice(0, 16)}
-            onChange={(e) =>
-              setPoll({
-                ...poll,
-                dateToInit: new Date(e.target.value).toISOString(),
-              })
-            }
-            className="w-full p-2 border rounded mt-1"
+            className="w-1/2 border p-2 rounded"
+            value={dateToInit}
+            onChange={(e) => setDateToInit(e.target.value)}
+            required
           />
-        </label>
-
-        <label className="block">
-          Data de Fim:
           <input
             type="datetime-local"
-            value={poll.dateToEnd.slice(0, 16)}
-            onChange={(e) =>
-              setPoll({
-                ...poll,
-                dateToEnd: new Date(e.target.value).toISOString(),
-              })
-            }
-            className="w-full p-2 border rounded mt-1"
+            className="w-1/2 border p-2 rounded"
+            value={dateToEnd}
+            onChange={(e) => setDateToEnd(e.target.value)}
+            required
           />
-        </label>
+        </div>
 
-        <div>
-          <p className="font-semibold">Respostas:</p>
-          {poll.pollResponses.map((resp: any, idx: number) => (
+        <div className="space-y-2">
+          {options.map((opt, index) => (
             <input
-              key={resp.id}
+              key={opt.id}
               type="text"
-              value={resp.title}
-              onChange={(e) => handleChange(idx, e.target.value)}
-              className="w-full p-2 border rounded mt-2"
+              placeholder={`Opção ${index + 1}`}
+              className="w-full border p-2 rounded"
+              value={opt.title}
+              onChange={(e) => handleOptionChange(index, e.target.value)}
+              required
             />
           ))}
         </div>
 
         <button
           type="submit"
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
         >
           Salvar Alterações
         </button>
