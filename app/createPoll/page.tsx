@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 export default function CreatePoll() {
   return (
     <>
       <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
+        <Link href={"/"}>Voltar</Link>
         <h1 className="text-2xl font-bold mb-6">
           Bem-vindo ao seu gerador de enquetes
         </h1>
