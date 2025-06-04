@@ -1,17 +1,13 @@
-export type Poll = {
+import PollResponse from "./PollResponse";
+
+export default interface PollData {
   id: number;
   title: string;
-  dateToInit: Date;
-  dateToEnd: Date;
-  pollResponses: [
-    {
-      id: number;
-      title: string;
-      vote: number;
-      pollId: number;
-    }
-  ];
+  dateToInit: string;
+  dateToEnd: string;
+  urlToEdit: string;
+  pollResponses: PollResponse[];
   _count: {
     pollResponses: number;
   };
-};
+}

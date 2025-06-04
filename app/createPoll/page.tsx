@@ -1,89 +1,138 @@
-import Link from "next/link";
+"use client";
 
-export default function CreatePoll() {
+import Link from "next/link";
+import { useState } from "react";
+
+export default function CreatePollForm() {
+  const [title, setTitle] = useState("");
+  const [dateToInit, setDateToInit] = useState("");
+  const [dateToEnd, setDateToEnd] = useState("");
+  const [options, setOptions] = useState(["", "", ""]);
+  const [editUrl, setEditUrl] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload = {
+      pollBody: {
+        title,
+        dateToInit: new Date(dateToInit).toISOString(),
+        dateToEnd: new Date(dateToEnd).toISOString(),
+      },
+      pollResponse: options
+        .filter((opt) => opt.trim() !== "")
+        .map((title) => ({ title })),
+    };
+
+    const res = await fetch("http://localhost:3000/poll", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setEditUrl(`http://localhost:3001/editPoll/${data.urlToEdit}`);
+      alert("Enquete criada com sucesso!");
+      setTitle("");
+      setDateToInit("");
+      setDateToEnd("");
+      setOptions(["", "", ""]);
+    } else {
+      const error = await res.text();
+      alert(`Erro: ${error}`);
+    }
+  };
+
+  const handleOptionChange = (value: string, index: number) => {
+    const updated = [...options];
+    updated[index] = value;
+    setOptions(updated);
+  };
+
   return (
     <>
-      <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
-        <Link href={"/"}>Voltar</Link>
-        <h1 className="text-2xl font-bold mb-6">
-          Bem-vindo ao seu gerador de enquetes
-        </h1>
-        <form
-          method="POST"
-          className="bg-white p-6 rounded-2xl shadow-md w-full max-w-md space-y-4"
-        >
-          <div>
-            <label className="block font-medium mb-1" htmlFor="title">
-              Título da Enquete
-            </label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              className="w-full border border-gray-300 rounded-lg p-2"
-              required
-            />
-          </div>
+      <Link href={"/"} className="text-blue-600 hover:underline block mb-4">
+        Voltar
+      </Link>
 
-          <div>
-            <label className="block font-medium mb-1" htmlFor="dateToInit">
-              Data para Iniciar
-            </label>
-            <input
-              type="datetime-local"
-              id="dateToInit"
-              name="dateToInit"
-              className="w-full border border-gray-300 rounded-lg p-2"
-              required
-            />
-          </div>
+      <form
+        onSubmit={handleSubmit}
+        className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow space-y-4"
+      >
+        <h2 className="text-2xl font-bold text-center">Criar Nova Enquete</h2>
 
-          <div>
-            <label className="block font-medium mb-1" htmlFor="dateToEnd">
-              Data para Encerrar
-            </label>
-            <input
-              type="datetime-local"
-              id="dateToEnd"
-              name="dateToEnd"
-              className="w-full border border-gray-300 rounded-lg p-2"
-              required
-            />
-          </div>
+        <input
+          type="text"
+          placeholder="Título da Enquete"
+          className="w-full border p-2 rounded"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+        />
 
-          <div>
-            <label className="block font-medium mb-1">Respostas</label>
-            <input
-              type="text"
-              name="response1"
-              placeholder="Resposta 1"
-              className="w-full border border-gray-300 rounded-lg p-2 mb-2"
-              required
-            />
-            <input
-              type="text"
-              name="response2"
-              placeholder="Resposta 2"
-              className="w-full border border-gray-300 rounded-lg p-2 mb-2"
-              required
-            />
-            <input
-              type="text"
-              name="response3"
-              placeholder="Resposta 3"
-              className="w-full border border-gray-300 rounded-lg p-2"
-              required
-            />
-          </div>
+        <div className="flex gap-4">
+          <input
+            type="datetime-local"
+            className="w-1/2 border p-2 rounded"
+            value={dateToInit}
+            onChange={(e) => setDateToInit(e.target.value)}
+            required
+          />
+          <input
+            type="datetime-local"
+            className="w-1/2 border p-2 rounded"
+            value={dateToEnd}
+            onChange={(e) => setDateToEnd(e.target.value)}
+            required
+          />
+        </div>
 
+        <div className="space-y-2">
+          {options.map((opt, index) => (
+            <input
+              key={index}
+              type="text"
+              placeholder={`Opção ${index + 1}`}
+              className="w-full border p-2 rounded"
+              value={opt}
+              onChange={(e) => handleOptionChange(e.target.value, index)}
+              required
+            />
+          ))}
           <button
-            type="submit"
-            className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition"
+            type="button"
+            className="text-blue-600 hover:underline text-sm"
+            onClick={() => setOptions([...options, ""])}
           >
-            Criar Enquete
+            + Adicionar opção
           </button>
-        </form>
-      </main>
+        </div>
+
+        <button
+          type="submit"
+          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+        >
+          Criar Enquete
+        </button>
+      </form>
+
+      {editUrl && (
+        <div className="max-w-xl mx-auto mt-6 p-4 bg-green-100 border border-green-400 text-green-800 rounded shadow">
+          <p className="font-semibold">Parabéns! Sua enquete foi criada.</p>
+          <p>
+            Para editar no futuro, acesse:
+            <br />
+            <a
+              href={editUrl}
+              className="text-blue-700 underline"
+              target="_blank"
+            >
+              {editUrl}
+            </a>
+          </p>
+        </div>
+      )}
     </>
   );
 }
